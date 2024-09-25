@@ -1,0 +1,50 @@
+name: Build and deploy Node.js app to Azure Web App
+
+on:
+  push:
+    branches:
+      - main  # Trigger deployment when pushing to the main branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'  # Ensure the correct Node.js version is used
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build the app
+      run: npm run build  # If your app requires a build step, otherwise skip this
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'cukier'  # Azure App Service name
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}  # Use the publish profile secret
+        package: '.'
+
+    - name: Set environment variables
+      run: |
+        az webapp config appsettings set --name cukier --resource-group cukier_group --settings \
+          API_SECRET="organistapedal" \
+          AUTH_DEFAULT_ROLES="readable devicestatus-upload" \
+          BASAL_RENDER="default" \
+          BRIDGE_SERVER="EU" \
+          CUSTOM_TITLE="Mateuszek" \
+          DEVICESTATUS_ADVANCED="true" \
+          MONGODB_URI="mongodb+srv://kubaajed:D8hxBkVCcr1um6c8@cluster0.gn5dk8p.mongodb.net/?retryWrites=true&w=majority" \
+          PUMP_FIELDS="clock reservoir battery status" \
+          SCM_COMMAND_IDLE_TIMEOUT="300" \
+          SHOW_PLUGINS="careportal dbsize cob cage sage iage bage basal pump iob bwp openaps loop speech" \
+          TIME_FORMAT="24"
+
+    - name: Restart the app
+      run: az webapp restart --name cukier --resource-group cukier_group
